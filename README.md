@@ -17,7 +17,16 @@ Deployed website link - https://taskflow-frontend-b3yj.onrender.com
 - Email: coder2@gmail.com
 - Password: coder2
 
----
+## Key Features
+
+- Real-time multi-user collaboration (Socket.IO rooms)
+- Drag-and-drop Kanban boards (dnd-kit)
+- JWT-based authentication
+- Role-based board ownership & collaboration
+- Activity history tracking (board-level)
+- Priority-based task management (High / Medium / Low)
+- Task search with filtering (including priority)
+- Optimistic UI updates with server reconciliation
 
 ## Tech Stack
 
@@ -40,8 +49,6 @@ Deployed website link - https://taskflow-frontend-b3yj.onrender.com
 - JWT Authentication
 - bcrypt
 
----
-
 ## Quick Start Guide (Local Setup)
 
 ### Prerequisites
@@ -51,52 +58,40 @@ Deployed website link - https://taskflow-frontend-b3yj.onrender.com
 
 ### 1. Clone Repository
 
-```bash
 git clone https://github.com/navyasree981/taskflow.git
 cd taskflow
-```
 
 ### 2. Backend Setup
 
-```bash
 cd backend
 npm install
 cp .env.example .env
 npm run dev
-```
 
 **backend/.env**
 
-```env
 PORT=5000
 NODE_ENV=development
 MONGO_URI=mongodb://localhost:27017/taskflow
 JWT_SECRET=your_secret
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
-```
 
 Backend runs at: [http://localhost:5000]
 
 ### 3. Frontend Setup (New Terminal)
 
-```bash
 cd frontend
 npm install
 cp .env.example .env
 npm run dev
-```
 
 **frontend/.env**
 
-```env
 VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
-```
 
 Frontend runs at: [http://localhost:5173]
-
----
 
 ## Frontend Architecture
 
@@ -109,8 +104,6 @@ Frontend runs at: [http://localhost:5173]
 **Flow:**
 UI → Zustand Store → API / Socket → Store Update → UI Re-render
 
----
-
 ## Backend Architecture
 
 - **Layered Structure:** Routes → Middleware → Controllers → Models
@@ -120,8 +113,6 @@ UI → Zustand Store → API / Socket → Store Update → UI Re-render
 
 **Flow:**
 Request → Auth Middleware → Controller → MongoDB → Socket Event → Clients
-
----
 
 ## Database Schema
 
@@ -137,7 +128,6 @@ Request → Auth Middleware → Controller → MongoDB → Socket Event → Clie
 - color
 - createdAt
 - updatedAt
-- \_\_v
 
 ### boards
 
@@ -152,7 +142,6 @@ Request → Auth Middleware → Controller → MongoDB → Socket Event → Clie
 - listOrder
 - createdAt
 - updatedAt
-- \_\_v
 
 ### lists
 
@@ -165,7 +154,6 @@ Request → Auth Middleware → Controller → MongoDB → Socket Event → Clie
 - isArchived
 - createdAt
 - updatedAt
-- \_\_v
 
 ### tasks
 
@@ -176,7 +164,7 @@ Request → Auth Middleware → Controller → MongoDB → Socket Event → Clie
 - board
 - position
 - assignees
-- priority
+- priority (High | Medium | Low)
 - dueDate
 - cover
 - isArchived
@@ -186,7 +174,6 @@ Request → Auth Middleware → Controller → MongoDB → Socket Event → Clie
 - attachments
 - createdAt
 - updatedAt
-- \_\_v
 
 ### activities
 
@@ -200,70 +187,63 @@ Request → Auth Middleware → Controller → MongoDB → Socket Event → Clie
 - description
 - createdAt
 - updatedAt
-- \_\_v
-
----
 
 ## Database Schema Diagram
 
-```mermaid
 erDiagram
-  USERS {
-    ObjectId _id
-    string name
-    string email
-    string password
-    string avatar
-    string color
-  }
+USERS {
+ObjectId \_id
+string name
+string email
+string password
+string avatar
+string color
+}
 
-  BOARDS {
-    ObjectId _id
-    string title
-    string description
-    string color
-    ObjectId owner
-    array members
-  }
+BOARDS {
+ObjectId \_id
+string title
+string description
+string color
+ObjectId owner
+array members
+}
 
-  LISTS {
-    ObjectId _id
-    string title
-    ObjectId board
-    number position
-  }
+LISTS {
+ObjectId \_id
+string title
+ObjectId board
+number position
+}
 
-  TASKS {
-    ObjectId _id
-    string title
-    ObjectId list
-    ObjectId board
-    string priority
-    ObjectId createdBy
-  }
+TASKS {
+ObjectId \_id
+string title
+ObjectId list
+ObjectId board
+string priority
+ObjectId createdBy
+}
 
-  ACTIVITIES {
-    ObjectId _id
-    ObjectId board
-    ObjectId user
-    string type
-    string entity
-  }
+ACTIVITIES {
+ObjectId \_id
+ObjectId board
+ObjectId user
+string type
+string entity
+}
 
-  USERS ||--o{ BOARDS : owns
-  USERS ||--o{ TASKS : creates
-  USERS ||--o{ ACTIVITIES : logs
+USERS ||--o{ BOARDS : owns
+USERS ||--o{ TASKS : creates
+USERS ||--o{ ACTIVITIES : logs
 
-  BOARDS ||--o{ LISTS : contains
-  LISTS ||--o{ TASKS : contains
-  BOARDS ||--o{ TASKS : groups
-  BOARDS ||--o{ ACTIVITIES : tracks
+BOARDS ||--o{ LISTS : contains
+LISTS ||--o{ TASKS : contains
+BOARDS ||--o{ TASKS : groups
+BOARDS ||--o{ ACTIVITIES : tracks
 
-  USERS }o--o{ BOARDS : collaborates
-  USERS }o--o{ TASKS : assigned
-```
-
----
+USERS }o--o{ BOARDS : collaborates
+USERS }o--o{ TASKS : assigned
 
 ## API Contract Design
 
@@ -307,32 +287,75 @@ Base URL: `http://localhost:5000/api`
 
 **Authorization Header**
 
-```
 Authorization: Bearer <token>
-```
 
----
+### Task Search & Filtering
+
+TaskFlow supports advanced task search and filtering:
+
+- Search tasks by title
+- Filter tasks by priority (High / Medium / Low)
+- Filter within board scope
+- Combined search + priority filtering
+
+Priority values:
+
+- High
+- Medium
+- Low
+
+Endpoint:
+GET /tasks/search?query=<keyword>&priority=<level>
+
+Example:
+GET /tasks/search?priority=High
 
 ## Real-Time Sync Strategy
 
-- Clients join board-specific rooms: `board:{boardId}`
+- Clients join board-specific rooms: board:{boardId}
 - Server broadcasts updates using Socket.IO
 
-**Events**
+Events:
 
 - task:created
 - task:updated
 - task:moved
+- task:assigned
 - list:created
 - board:updated
+- activity:created
 
-**Strategy**
+Strategy:
 
 - Optimistic UI updates on client
+- Server validates & persists changes
 - Server emits final state to all collaborators
-- Clients reconcile local state with server events
+- Clients reconcile local Zustand store
+- Activity log updates in real-time on board side panel
 
----
+## Activity Tracking System
+
+TaskFlow maintains a real-time board-level activity log.
+
+Every significant action generates an activity record such as :
+
+- Task created
+- Task updated and so on
+
+Activity entries include:
+
+- user
+- entity (task / list / board)
+- entityTitle
+- type
+- description
+- timestamp
+
+Activities are:
+
+- Stored in MongoDB Atlas free cluster
+- Broadcasted in real-time using Socket.IO
+- Displayed in the board side activity panel indicated with i inside a circle in the navigation bar.
 
 ## Scalability Considerations
 
@@ -341,22 +364,17 @@ Authorization: Bearer <token>
 - MongoDB indexes for faster board/list/task queries
 - Optional caching layer (Redis) for frequently accessed boards
 
----
-
 ## Assumptions & Trade-offs
 
 ### Assumptions
 
 - Boards have limited concurrent editors
-- Tasks per board remain within UI performance limits
 
 ### Trade-offs
 
 - JWT stored client-side for simplicity
 - Optimistic updates improve UX but require rollback logic
 - No offline support in current version
-
----
 
 ## License
 
